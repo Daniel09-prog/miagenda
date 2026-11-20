@@ -1,0 +1,6 @@
+{
+  "name": "Mi Agenda - Kotlin & Jetpack Compose",
+  "description": "Aplicación Android educativa y simulador interactivo para principiantes.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
