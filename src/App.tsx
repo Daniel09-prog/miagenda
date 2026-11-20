@@ -18,10 +18,12 @@ import {
   Calendar,
   Code2,
   BookOpen,
-  CheckSquare
+  CheckSquare,
+  Filter
 } from 'lucide-react';
 
 type Priority = 'Baja' | 'Media' | 'Alta';
+type FilterOption = 'Todas' | Priority;
 
 interface Task {
   id: string;
@@ -46,6 +48,7 @@ export default function App() {
   const [inputDate, setInputDate] = useState(todayStr);
   const [inputPriority, setInputPriority] = useState<Priority>('Media');
   const [searchQuery, setSearchQuery] = useState('');
+  const [priorityFilter, setPriorityFilter] = useState<FilterOption>('Todas');
   const [inputError, setInputError] = useState<string | null>(null);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -108,10 +111,12 @@ export default function App() {
   const completedTasks = tasks.filter(t => t.completed).length;
   const progressPercentage = totalTasks === 0 ? 0 : Math.round((completedTasks / totalTasks) * 100);
 
-  // Filtered tasks based on real-time search query
-  const filteredTasks = tasks.filter(t => 
-    t.title.toLowerCase().includes(searchQuery.toLowerCase().trim())
-  );
+  // Filtered tasks based on search query and priority filter
+  const filteredTasks = tasks.filter(t => {
+    const matchesSearch = t.title.toLowerCase().includes(searchQuery.toLowerCase().trim());
+    const matchesPriority = priorityFilter === 'Todas' || t.priority === priorityFilter;
+    return matchesSearch && matchesPriority;
+  });
 
   const kotlinCodeMain = `package com.example.miagenda
 
@@ -170,14 +175,17 @@ fun AgendaScreen() {
     var dateInput by remember { mutableStateOf(LocalDate.now().toString()) }
     var priorityInput by remember { mutableStateOf(Priority.Media) }
     var searchQuery by remember { mutableStateOf("") }
+    var priorityFilter by remember { mutableStateOf("Todas") }
     var showError by remember { mutableStateOf(false) }
 
     val totalCount = taskList.size
     val completedCount = taskList.count { it.completed }
     val progress = if (totalCount == 0) 0f else completedCount.toFloat() / totalCount.toFloat()
 
-    val filteredList = taskList.filter { 
-        it.title.contains(searchQuery, ignoreCase = true) 
+    val filteredList = taskList.filter { task ->
+        val matchesSearch = task.title.contains(searchQuery, ignoreCase = true)
+        val matchesPriority = priorityFilter == "Todas" || task.priority.name == priorityFilter
+        matchesSearch && matchesPriority
     }
 
     Scaffold(
@@ -198,7 +206,7 @@ fun AgendaScreen() {
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Contenido de la app ...
+            // Contenido y barra de filtros...
         }
     }
 }`;
@@ -355,13 +363,37 @@ fun AgendaScreen() {
                 )}
               </div>
 
+              {/* Priority Filter Chips Bar */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-0.5">
+                <span className="text-[11px] text-slate-400 flex items-center gap-1 shrink-0 font-medium">
+                  <Filter className="w-3 h-3 text-amber-400" />
+                  <span>Filtrar:</span>
+                </span>
+                {(['Todas', 'Alta', 'Media', 'Baja'] as FilterOption[]).map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() => setPriorityFilter(option)}
+                    className={`px-3 py-1 text-[11px] font-semibold rounded-lg transition-all shrink-0 border ${
+                      priorityFilter === option
+                        ? 'bg-amber-500 text-blue-950 border-amber-400 shadow-sm font-bold'
+                        : 'bg-slate-950 text-slate-300 border-slate-800 hover:border-slate-700'
+                    }`}
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
+
               {/* Task List */}
               <div className="flex-1 space-y-2.5 overflow-y-auto pr-0.5">
                 {filteredTasks.length === 0 ? (
                   <div className="h-40 flex flex-col items-center justify-center text-center p-4 text-slate-500">
                     <ListTodo className="w-9 h-9 mb-2 opacity-40 text-amber-400" />
                     <p className="text-xs">
-                      {searchQuery ? 'No se encontraron actividades con ese nombre' : 'No hay actividades pendientes. ¡Agrega una nueva arriba!'}
+                      {searchQuery || priorityFilter !== 'Todas' 
+                        ? 'No se encontraron actividades con los filtros aplicados' 
+                        : 'No hay actividades pendientes. ¡Agrega una nueva arriba!'}
                     </p>
                   </div>
                 ) : (
@@ -488,7 +520,7 @@ fun AgendaScreen() {
           </button>
         </div>
 
-      </div >
+      </div>
     </div>
   );
 }
